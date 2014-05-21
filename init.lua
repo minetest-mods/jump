@@ -67,7 +67,6 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	} 
 	local data = vm:get_data() 
 	local c_stone  = minetest.get_content_id("default:stone")
-	local c_lava  = minetest.get_content_id("default:lava_source")
 	local dist = 3
 	
 	-- Loop through
@@ -80,14 +79,11 @@ minetest.register_on_generated(function(minp, maxp, seed)
 						data[vi] = c_stone
 					end
 				end
-			elseif minp.y <= -20 then
+			elseif minp.y <= -30 then
 				for y = minp.y, maxp.y do
 					if y <= -30 then
 						local vi = a:index(x, y, z)
 						data[vi] = c_stone
-					elseif y <= -20 then
-						local vi = a:index(x, y, z)
-						data[vi] = c_lava
 					end
 				end
 			end
