@@ -43,11 +43,11 @@ minetest.register_globalstep(function(dtime)
 					})
 				}
 			end
-			if pos.y > -1 and (not scores[name] or scores[name] < (math.floor(dist*100)/100)) then
+			if pos.y > -5 and (not scores[name] or scores[name] < (math.floor(dist*100)/100)) then
 				scores[name] = (math.floor(dist*100)/100)
 			end
 			if pos.y < -10 then
-				player:moveto({x = 0, y = 2, z = 0}, false)
+				player:moveto({x = 0, y = 0, z = 0}, false)
 			end
 		end
 	end
@@ -73,9 +73,9 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	-- Loop through
 	for z = minp.z, maxp.z do
 		for x = minp.x, maxp.x do
-			if x % dist == 0 and z % dist == 0 and minp.y <= 0 then
+			if x % dist == 0 and z % dist == 0 and minp.y <= -2 then
 				for y = minp.y, maxp.y do
-					if y <= 0 then
+					if y <= -2 then
 						local vi = a:index(x, y, z)
 						data[vi] = c_stone
 					end
@@ -100,7 +100,7 @@ end)
 
 minetest.register_on_respawnplayer(function(player)
 	if player then
-		player:moveto({x = 0, y = 2, z = 0}, false)
+		player:moveto({x = 0, y = 0, z = 0}, false)
 		return true
 	end
 
