@@ -8,9 +8,8 @@ Post your top scores in this topic.
 
 Some obvious rules:
 
-    No teleportation
-    No flying
-
+* No teleportation
+* No flying
 
 License: GPLv3.0+
 Dependencies: none
