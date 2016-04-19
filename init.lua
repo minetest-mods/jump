@@ -1,92 +1,94 @@
 local gui_ids = {}
-local count = 0
-local scores = {}
 minetest.register_on_leaveplayer(function(player)
-	local name = player:get_player_name()
-	gui_ids[name] = nil
+	gui_ids[player:get_player_name()] = nil
 end)
-minetest.register_globalstep(function(dtime)	
+
+local function reset_player(player)
+	player:moveto({x = 0, y = 0, z = 0}, false)
+end
+
+local scores = {}
+local update_interval = 0.1
+local count = 0
+minetest.register_globalstep(function(dtime)
 	count = count + dtime
-	if count > 0.5 then
-		count = 0
-		local players = minetest.get_connected_players()
-		for _,player in pairs(players) do
-			local name = player:get_player_name()
-			local pos = player:getpos()
-			local dist = math.sqrt(pos.x^2 + pos.z^2)
-			local best = 0
-			if scores[name] then
-				best = scores[name]
-			end
-			if gui_ids[name] then
-				player:hud_change(gui_ids[name].current, "text", "Current: "..(math.floor(dist*100)/100).."m")
-				player:hud_change(gui_ids[name].best, "text", "Best: "..best.."m")
-			else
-				gui_ids[name] = {
-					current = player:hud_add({
-						hud_elem_type = "text",
-						name = "jump_d",
-						number = 0xFFFFFF,
-						position = {x=0.99, y=0.05},
-						text="Current: "..(math.floor(dist*100)/100).."m",
-						scale = {x=200,y=25},
-						alignment = {x=-1, y=0}
-					}),
-					best = player:hud_add({
-						hud_elem_type = "text",
-						name = "jump_b",
-						number = 0xFFFFFF,
-						position = {x=0.99, y=0.09},
-						text="Best: "..best.."m",
-						scale = {x=200,y=25},
-						alignment = {x=-1, y=0}
-					})
-				}
-			end
-			if pos.y > -5 and (not scores[name] or scores[name] < (math.floor(dist*100)/100)) then
-				scores[name] = (math.floor(dist*100)/100)
-			end
-			if pos.y < -10 then
-				player:moveto({x = 0, y = 0, z = 0}, false)
-			end
+	if count < update_interval then
+		return
+	end
+	count = 0
+	for _,player in pairs(minetest.get_connected_players()) do
+		local name = player:get_player_name()
+		local pos = player:getpos()
+		local dist = math.sqrt(pos.x^2 + pos.z^2)
+		local current_score = math.floor(dist*100)/100
+		local best = scores[name] or 0
+		if gui_ids[name] then
+			player:hud_change(gui_ids[name].current, "text", "Current: "..(math.floor(dist*100)/100).."m")
+			player:hud_change(gui_ids[name].best, "text", "Best: "..best.."m")
+		else
+			gui_ids[name] = {
+				current = player:hud_add({
+					hud_elem_type = "text",
+					name = "jump_d",
+					number = 0xFFFFFF,
+					position = {x=0.99, y=0.05},
+					text="Current: "..current_score.."m",
+					scale = {x=200,y=25},
+					alignment = {x=-1, y=0}
+				}),
+				best = player:hud_add({
+					hud_elem_type = "text",
+					name = "jump_b",
+					number = 0xFFFFFF,
+					position = {x=0.99, y=0.09},
+					text="Best: "..best.."m",
+					scale = {x=200,y=25},
+					alignment = {x=-1, y=0}
+				})
+			}
+		end
+		if pos.y < -10 then
+		--or player:get_player_control().aux1 then
+			reset_player(player)
+		elseif pos.y > -5 and (not scores[name] or scores[name] < current_score) then
+			scores[name] = current_score
 		end
 	end
 end)
 
 minetest.register_on_mapgen_init(function(mgparams)
-		minetest.set_mapgen_params({mgname="singlenode"})
+	minetest.set_mapgen_params({mgname="singlenode"})
 end)
- 
-minetest.register_on_generated(function(minp, maxp, seed)
+
+local c_stone  = minetest.get_content_id("default:stone")
+local dist = 3
+minetest.register_on_generated(function(minp, maxp)
+	if minp.y > -2 then
+		return
+	end
+
 	-- Set up voxel manip
 	local t1 = os.clock()
 	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
-	local a = VoxelArea:new{
-			MinEdge={x=emin.x, y=emin.y, z=emin.z},
-			MaxEdge={x=emax.x, y=emax.y, z=emax.z},
-	} 
-	local data = vm:get_data() 
-	local c_stone  = minetest.get_content_id("default:stone")
-	local dist = 3
-	
-	-- Loop through
-	for z = minp.z, maxp.z do
-		for x = minp.x, maxp.x do
-			if x % dist == 0 and z % dist == 0 and minp.y <= -2 then
-				for y = minp.y, maxp.y do
-					if y <= -2 then
-						local vi = a:index(x, y, z)
-						data[vi] = c_stone
-					end
-				end
-			elseif minp.y <= -30 then
-				for y = minp.y, maxp.y do
-					if y <= -30 then
-						local vi = a:index(x, y, z)
-						data[vi] = c_stone
-					end
+	local data = vm:get_data()
+	local a = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
+
+	if maxp.y > -30 then
+		-- Add pillars
+		local minz = math.ceil(minp.z/dist)*dist
+		local minx = math.ceil(minp.x/dist)*dist
+		for z = minz, maxp.z, dist do
+			for x = minx, maxp.x, dist do
+				for vi in a:iter(x,minp.y,z, x,math.min(maxp.y, -2),z) do
+					data[vi] = c_stone
 				end
 			end
+		end
+	end
+	if minp.y <= -30 then
+		-- Add solid ground
+		for vi in a:iter(minp.x,minp.y,minp.z, maxp.x,math.min(maxp.y, -30),maxp.z) do
+			data[vi] = c_stone
 		end
 	end
 
@@ -96,7 +98,7 @@ end)
 
 minetest.register_on_respawnplayer(function(player)
 	if player then
-		player:moveto({x = 0, y = 0, z = 0}, false)
+		reset_player(player)
 		return true
 	end
 
