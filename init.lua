@@ -47,8 +47,8 @@ minetest.register_globalstep(function(dtime)
 				})
 			}
 		end
-		if pos.y < -10 then
-		--or player:get_player_control().aux1 then
+		if pos.y < -10
+		or player:get_player_control().aux1 then
 			reset_player(player)
 		elseif pos.y > -5 and (not scores[name] or scores[name] < current_score) then
 			scores[name] = current_score
